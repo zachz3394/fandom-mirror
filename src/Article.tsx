@@ -40,6 +40,7 @@ const Article = (props: ArticleProps) => {
   }
 
   useEffect(() => {
+    console.log(pageId);
     fetch(`https://starwars.fandom.com/api.php?action=parse&origin=*&format=json&page=${pageId}`)
     .then((x: any) => x.json())
     .then((x: any) => {
