@@ -18,7 +18,6 @@ const Article = (props: ArticleProps) => {
   
   const setupLazyLoad = () => {
     var lazyImages = [].slice.call(document.querySelectorAll('.lazyload'));
-    console.log(lazyImages);
 
     if ('IntersectionObserver' in window) {
       let lazyImageObserver = new IntersectionObserver((entries: IntersectionObserverEntry[], _: IntersectionObserver) => {
