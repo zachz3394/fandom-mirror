@@ -1,0 +1,44 @@
+.infobox {
+  border: 1px solid #a2a9b1;
+  border-spacing: 3px;
+  background-color: #f8f9fa;
+  color: black;
+  margin: 0.5em 0 0.5em 1em;
+  padding: 0.2em;
+  float: right;
+  clear: right;
+  font-size: 88%;
+  line-height: 1.5em;
+  width: 22em;
+}
+
+div.thumb {
+  width: auto;
+  background-color: transparent;
+  margin-bottom: 0.5em;
+}
+
+.tleft {
+  margin: 0.5em 1.4em 1.3em 0;
+  clear: left;
+  float: left;
+}
+
+.tright {
+  margin: 0.5em 0 1.3em 1.4em;
+  clear: right;
+  float: right;
+}
+
+.mw-editsection {
+  display: none;
+}
+
+.scrollbox tr > td > div {
+  overflow-y: auto;
+  height: 400px;
+}
+
+.info-icon {
+  display: none;
+}
