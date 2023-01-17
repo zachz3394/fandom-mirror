@@ -16,8 +16,9 @@ const Article = (props: ArticleProps) => {
   const tailRegexSpace = new RegExp('\/revision[^\\s\"]+[\\s]', 'g'); 
   const tailRegexQuote = new RegExp('\/revision[^\\s\"]+[\"]', 'g'); 
   
+  // Parsed HTML only contains image source in data-src tags, so this is necessary
   const setupLazyLoad = () => {
-    var lazyImages = [].slice.call(document.querySelectorAll('.lazyload'));
+    let lazyImages = [].slice.call(document.querySelectorAll('.lazyload'));
 
     if ('IntersectionObserver' in window) {
       let lazyImageObserver = new IntersectionObserver((entries: IntersectionObserverEntry[], _: IntersectionObserver) => {
@@ -39,8 +40,32 @@ const Article = (props: ArticleProps) => {
     }
   }
 
+  const setupHideableContent = () => {
+    const hideableContainers = document.querySelectorAll<HTMLElement>('.hidable');
+    hideableContainers.forEach((hideable: HTMLElement) => {
+      const startHidden = hideable.classList.contains('start-hidden');
+
+      const hideableButton = hideable.querySelector<HTMLElement>('.hidable-button')!;
+      const hideableContent = hideable.querySelector<HTMLElement>('.hidable-content')!;
+
+      const hideContent = () => {
+        hideableContent.style.display = 'none';
+        hideableButton.innerHTML = '[Show]';
+        hideableButton.onclick = showContent;
+      }
+
+      const showContent = () => {
+        hideableContent.style.removeProperty('display');
+        hideableButton.innerHTML = '[Hide]';
+        hideableButton.onclick = hideContent;
+      }
+
+      if (startHidden) hideContent();
+      else showContent();
+    });
+  }
+
   useEffect(() => {
-    console.log(pageId);
     fetch(`https://starwars.fandom.com/api.php?action=parse&origin=*&format=json&page=${pageId}`)
     .then((x: any) => x.json())
     .then((x: any) => {
@@ -53,10 +78,11 @@ const Article = (props: ArticleProps) => {
 
   useEffect(() => {
     setupLazyLoad();
+    setupHideableContent();
   }, [ text ])
 
   return (
-    <div>
+    <div className='article-wrapper'>
       {parse(text)}
     </div>
   );
