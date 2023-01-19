@@ -12,6 +12,7 @@ const Article = (props: ArticleProps) => {
   const pageId = legends ? articleId + '/Legends' : articleId;
 
   const [ text, setText ] = useState('');
+  const [ title, setTitle ] = useState('');
 
   const tailRegexSpace = new RegExp('\/revision[^\\s\"]+[\\s]', 'g'); 
   const tailRegexQuote = new RegExp('\/revision[^\\s\"]+[\"]', 'g'); 
@@ -32,7 +33,7 @@ const Article = (props: ArticleProps) => {
         });
       });
 
-      lazyImages.forEach(function(lazyImage) {
+      lazyImages.forEach((lazyImage: never) => {
         lazyImageObserver.observe(lazyImage);
       });
     } else {
@@ -65,6 +66,62 @@ const Article = (props: ArticleProps) => {
     });
   }
 
+  const setupToc = () => {
+    const toc = document.querySelector<HTMLElement>('#toc');
+    const wrapper = document.querySelector<HTMLElement>('.article-wrapper');
+    const content = document.querySelector<HTMLElement>('.mw-parser-output');
+    const firstToc = document.querySelector<HTMLElement>('.tocsection-1');
+
+    if (toc != null && wrapper != null && content != null &&  firstToc != null) {
+      const titleElement = document.createElement('h1');
+      titleElement.setAttribute('id', 'article-title');
+      titleElement.innerHTML = title;
+      content.insertBefore(titleElement, content.firstChild);
+
+      const tocWrapper = document.createElement('div');
+      tocWrapper.setAttribute('id', 'toc-wrapper');
+      tocWrapper.insertBefore(toc, null);
+      wrapper.insertBefore(tocWrapper, content);
+
+      const tocIntroLi = document.createElement('li');
+      const tocIntroA = document.createElement('a');
+      tocIntroA.setAttribute('href', '#article-title');
+      tocIntroA.innerHTML = title;
+      tocIntroLi.classList.add('toclevel-1');
+      tocIntroLi.append(tocIntroA);
+
+      firstToc.parentNode!.insertBefore(tocIntroLi, firstToc);
+
+      window.onscroll = updateTocHighlight;
+    }
+  }
+
+  const updateTocHighlight = () => {
+    const scroll = document.documentElement.scrollTop;
+    const tocEntries = document.querySelectorAll<HTMLElement>('.toclevel-1, .toclevel-2, .toclevel-3, .toclevel-4, .toclevel-5');
+
+    let highlight = null;
+
+    tocEntries.forEach((entry: HTMLElement) => {
+      const linkedElementId = entry.querySelector('a')!.getAttribute('href')!;
+      const linkedElement = document.getElementById(linkedElementId.substring(1));
+      const elementPos = linkedElement!.offsetTop;
+
+      if (elementPos < scroll + 108) {
+        highlight = entry;
+      }
+
+      entry.classList.remove('active');
+    });
+
+    if (highlight != null) {
+      (highlight as HTMLElement).classList.add('active');
+      document.querySelector('#toc')!
+        .scrollTo(0, Math.max((highlight as HTMLElement).offsetTop - screen.height / 3, 0));
+    }
+  }
+
+
   useEffect(() => {
     fetch(`https://starwars.fandom.com/api.php?action=parse&origin=*&format=json&page=${pageId}`)
     .then((x: any) => x.json())
@@ -72,6 +129,7 @@ const Article = (props: ArticleProps) => {
       let t = x.parse.text['*'] 
       t = t.replaceAll(tailRegexSpace, ' ')
       t = t.replaceAll(tailRegexQuote, '"')
+      setTitle(x.parse.title);
       setText(t);
     });
   }, []);
@@ -79,7 +137,8 @@ const Article = (props: ArticleProps) => {
   useEffect(() => {
     setupLazyLoad();
     setupHideableContent();
-  }, [ text ])
+    setupToc();
+  }, [ text, title ])
 
   return (
     <div className='article-wrapper'>

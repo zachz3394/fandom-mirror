@@ -32,8 +32,9 @@ a:hover {
 }
 
 .article-wrapper {
-  max-width: 800px;
+  max-width: 1200px;
   margin: auto;
+  display: flex;
 }
 
 /* Hideable Content Styles */
@@ -109,6 +110,16 @@ a:hover {
 }
 
 /* TOC Styles */
+#toc-wrapper {
+  flex: 2;
+}
+
+#toc {
+  position: sticky;
+  top: 24px;
+  overflow-y: auto;
+  height: calc(100vh - 24px);
+}
 
 .toc ul {
   list-style: none;
@@ -123,20 +134,16 @@ a:hover {
   overflow-wrap: break-word;
 }
 
-.toctogglespan::after {
-  content: ']';
+.active > a {
+  background-color: #8c1a19;
+  color: white;
 }
 
-.toctogglespan::before {
-  content: ' [';
-}
-
-.toctogglelabel::after {
-  content: 'hide';
-  color: #8c1a19;
-}
 
 /* Main Content Styles */
+.mw-parser-output {
+  flex: 7;
+}
 
 p {
   line-height: 175%;
