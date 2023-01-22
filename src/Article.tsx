@@ -13,6 +13,7 @@ const Article = (props: ArticleProps) => {
 
   const [ text, setText ] = useState('');
   const [ title, setTitle ] = useState('');
+  const [ history, setHistory ] = useState([]);
 
   const tailRegexSpace = new RegExp('\/revision[^\\s\"]+[\\s]', 'g'); 
   const tailRegexQuote = new RegExp('\/revision[^\\s\"]+[\"]', 'g'); 
@@ -121,17 +122,35 @@ const Article = (props: ArticleProps) => {
     }
   }
 
+  const updateHistory = (title: string, pageId: string) => {
+    let storedHistory = JSON.parse(window.localStorage.getItem('history') || '[]');
+    storedHistory.unshift({title: title, pageId: pageId});
+    storedHistory = storedHistory.filter((item: any, index: number) => {
+      storedHistory.indexOf(item) === index;
+    });
+    if (storedHistory.length > 5) {
+      storedHistory = storedHistory.slice(0, 5);
+    }
+    console.log(storedHistory);
+    setHistory(storedHistory);
+    window.localStorage.setItem('history', JSON.stringify(storedHistory));
+  }
 
   useEffect(() => {
-    fetch(`https://starwars.fandom.com/api.php?action=parse&origin=*&format=json&page=${pageId}`)
-    .then((x: any) => x.json())
-    .then((x: any) => {
-      let t = x.parse.text['*'] 
-      t = t.replaceAll(tailRegexSpace, ' ')
-      t = t.replaceAll(tailRegexQuote, '"')
-      setTitle(x.parse.title);
-      setText(t);
-    });
+    if (pageId != undefined) {
+      fetch(`https://starwars.fandom.com/api.php?action=parse&origin=*&format=json&page=${pageId}`)
+      .then((x: any) => x.json())
+      .then((x: any) => {
+        let t = x.parse.text['*'] 
+        t = t.replaceAll(tailRegexSpace, ' ')
+        t = t.replaceAll(tailRegexQuote, '"')
+        setTitle(x.parse.title);
+        setText(t);
+        updateHistory(x.parse.title, pageId);
+      });
+    } else {
+      console.error('PageId is undefined');
+    }
   }, []);
 
   useEffect(() => {
