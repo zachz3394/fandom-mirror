@@ -2,6 +2,41 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import parse from 'html-react-parser';
 
+const hasLoaded = (selector: string) => {
+  const elt = document.querySelector<HTMLElement>(selector);
+  if (!elt) return false;
+  return true;
+}
+
+interface ArticleData {
+  title: string;
+  pageId: string;
+}
+
+interface RecentlyViewedProps {
+  history: ArticleData[];
+  className: string;
+  clearHistoryCallback: () => void;
+}
+
+const RecentlyViewed = (props: RecentlyViewedProps) => {
+  const { history, className, clearHistoryCallback } = props;
+
+  return(
+    <div className={className}>
+      <h2>
+        Recently Viewed
+      </h2>
+      <button onClick={clearHistoryCallback}> Clear </button>
+      {history.slice(1).map((article: ArticleData, index: number) =>
+        <div key={article.title}>
+          {article.title}
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface ArticleProps {
   legends?: boolean;
 }
@@ -13,7 +48,8 @@ const Article = (props: ArticleProps) => {
 
   const [ text, setText ] = useState('');
   const [ title, setTitle ] = useState('');
-  const [ history, setHistory ] = useState([]);
+  const [ history, setHistory ] = useState<ArticleData[]>([]);
+  const [ loading, setLoading ] = useState(true);
 
   const tailRegexSpace = new RegExp('\/revision[^\\s\"]+[\\s]', 'g'); 
   const tailRegexQuote = new RegExp('\/revision[^\\s\"]+[\"]', 'g'); 
@@ -87,7 +123,7 @@ const Article = (props: ArticleProps) => {
       const tocIntroLi = document.createElement('li');
       const tocIntroA = document.createElement('a');
       tocIntroA.setAttribute('href', '#article-title');
-      tocIntroA.innerHTML = title;
+      tocIntroA.innerHTML = 'Introduction';
       tocIntroLi.classList.add('toclevel-1');
       tocIntroLi.append(tocIntroA);
 
@@ -125,15 +161,19 @@ const Article = (props: ArticleProps) => {
   const updateHistory = (title: string, pageId: string) => {
     let storedHistory = JSON.parse(window.localStorage.getItem('history') || '[]');
     storedHistory.unshift({title: title, pageId: pageId});
-    storedHistory = storedHistory.filter((item: any, index: number) => {
-      storedHistory.indexOf(item) === index;
+    storedHistory = storedHistory.filter((item: ArticleData, index: number) => {
+      return storedHistory.findIndex((x: ArticleData) => x.title === item.title) === index;
     });
     if (storedHistory.length > 5) {
       storedHistory = storedHistory.slice(0, 5);
     }
-    console.log(storedHistory);
     setHistory(storedHistory);
     window.localStorage.setItem('history', JSON.stringify(storedHistory));
+  }
+
+  const clearHistory = () => {
+    window.localStorage.setItem('history', '[]');
+    setHistory([]);
   }
 
   useEffect(() => {
@@ -157,11 +197,24 @@ const Article = (props: ArticleProps) => {
     setupLazyLoad();
     setupHideableContent();
     setupToc();
+    document.title = `${title} | Capstone`;
   }, [ text, title ])
+
+  useEffect(() => {
+    setLoading(!hasLoaded('#toc'));
+  })
 
   return (
     <div className='article-wrapper'>
+      <div style={{display: loading ? 'inline' : 'none'}}>
+        Fetching...
+      </div>
       {parse(text)}
+      <RecentlyViewed
+        className='recently-viewed'
+        history={history}
+        clearHistoryCallback={clearHistory}
+      />
     </div>
   );
 };

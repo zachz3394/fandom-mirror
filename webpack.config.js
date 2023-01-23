@@ -24,6 +24,10 @@ module.exports = {
         test: /\.css$/,
         use: [MiniCssExtractPlugin.loader, 'css-loader'],
       },
+      {
+        test: /\.svg$/,
+        type: 'asset/resource',
+      }
     ]
   },
   devtool: prod ? undefined : 'source-map',
