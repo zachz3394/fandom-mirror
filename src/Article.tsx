@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import parse from 'html-react-parser';
 import RebelCrest from './Redstarbird.svg';
-import { IoMdClose as CloseIcon } from 'react-icons/io';
-
+import RecentlyViewed from './RecentlyViewed';
+import Navbar from './Navbar';
 
 const hasLoaded = (selector: string) => {
   const elt = document.querySelector<HTMLElement>(selector);
@@ -11,54 +11,9 @@ const hasLoaded = (selector: string) => {
   return true;
 }
 
-interface ArticleData {
+export interface ArticleData {
   title: string;
   pageId: string;
-}
-
-interface RecentlyViewedProps {
-  history: ArticleData[];
-  className: string;
-  clearHistoryCallback: () => void;
-  removeFromHistoryCallback: (pageId: string) => void;
-}
-
-const RecentlyViewed = (props: RecentlyViewedProps) => {
-  const { history, className, clearHistoryCallback, removeFromHistoryCallback } = props;
-
-  return(
-    <div className='viewed-wrapper'>
-      <div className={className}>
-        <h2>
-          Recently Viewed
-        </h2>
-        {
-          history.length > 1 ?
-          <div>
-            <span onClick={clearHistoryCallback} className='clear-history'>clear all</span>
-            <ul>
-              {history.slice(1).map((article: ArticleData) =>
-                <li key={article.title} className='history-entry'>
-                  <div
-                    className='icon-container'
-                    onClick={() => removeFromHistoryCallback(article.pageId)}
-                  >
-                    <CloseIcon className='delete-history-button'/>
-                  </div>
-                  <a href={`/wiki/${article.pageId}`}>
-                    {article.title}
-                  </a>
-                </li>
-              )}
-            </ul>
-          </div>
-          : <div>
-            <i> Recently visited pages will show up here </i>
-          </div>
-        }
-      </div>
-    </div>
-  )
 }
 
 interface ArticleProps {
@@ -72,13 +27,12 @@ const Article = (props: ArticleProps) => {
 
   const [ text, setText ] = useState('');
   const [ title, setTitle ] = useState('');
-  const [ history, setHistory ] = useState<ArticleData[]>([]);
   const [ loading, setLoading ] = useState(true);
 
   const tailRegexSpace = new RegExp('\/revision[^\\s\"]+[\\s]', 'g'); 
   const tailRegexQuote = new RegExp('\/revision[^\\s\"]+[\"]', 'g'); 
   
-  // Parsed HTML only contains image source in data-src tags, so this is necessary
+  // Parsed HTML only contains image source in data-src tags, so this copies to src as needed
   const setupLazyLoad = () => {
     let lazyImages = [].slice.call(document.querySelectorAll('.lazyload'));
 
@@ -102,6 +56,7 @@ const Article = (props: ArticleProps) => {
     }
   }
 
+  // Automatically adds functionality to the [hide] and [show] buttons in .hidable elements
   const setupHideableContent = () => {
     const hideableContainers = document.querySelectorAll<HTMLElement>('.hidable');
     hideableContainers.forEach((hideable: HTMLElement) => {
@@ -136,6 +91,11 @@ const Article = (props: ArticleProps) => {
     if (toc != null && wrapper != null && content != null &&  firstToc != null) {
       wrapper.insertBefore(toc, content);
 
+      const copyright = document.createElement('p');
+      copyright.classList.add('copyright-notice');
+      copyright.innerHTML = `This article is copyrighted by Wookiepedia and is licensed for re-use under the CC-BY-SA. The original article can be found <a href='https://starwars.fandom.com/wiki/${pageId}' target='_blank'>here</a>.`
+      content.insertBefore(copyright, content.firstChild);
+
       const titleElement = document.createElement('h1');
       titleElement.setAttribute('id', 'article-title');
       titleElement.innerHTML = title;
@@ -159,6 +119,7 @@ const Article = (props: ArticleProps) => {
     }
   }
 
+  // Is called on scroll to update our location in the document
   const updateTocHighlight = () => {
     const scroll = document.documentElement.scrollTop;
     const tocEntries = document.querySelectorAll<HTMLElement>('.toclevel-1, .toclevel-2, .toclevel-3, .toclevel-4, .toclevel-5');
@@ -179,49 +140,29 @@ const Article = (props: ArticleProps) => {
 
     if (highlight != null) {
       (highlight as HTMLElement).classList.add('active');
-      document.querySelector('#toc')!
-        .scrollTo(0, Math.max((highlight as HTMLElement).offsetTop - screen.height / 3, 0));
+      const tocElt = document.querySelector('#toc')
+      if (tocElt) {
+        tocElt.scrollTo(0, Math.max((highlight as HTMLElement).offsetTop - screen.height / 3, 0));
+      }
     }
   }
 
-  const updateHistory = (title: string, pageId: string) => {
-    let storedHistory = JSON.parse(window.localStorage.getItem('history') || '[]');
-    storedHistory.unshift({title: title, pageId: pageId});
-    storedHistory = storedHistory.filter((item: ArticleData, index: number) => {
-      return storedHistory.findIndex((x: ArticleData) => x.title === item.title) === index;
-    });
-    if (storedHistory.length > 10) {
-      storedHistory = storedHistory.slice(0, 10);
-    }
-    setHistory(storedHistory);
-    window.localStorage.setItem('history', JSON.stringify(storedHistory));
-  }
-
-  const clearHistory = () => {
-    window.localStorage.setItem('history', '[]');
-    setHistory([]);
-  }
-
-  const removeFromHistory = (pageId: string) => {
-    let storedHistory = JSON.parse(window.localStorage.getItem('history') || '[]');
-    storedHistory = storedHistory.filter((item: ArticleData) => {
-      return item.pageId !== pageId;
-    });
-    setHistory(storedHistory);
-    window.localStorage.setItem('history', JSON.stringify(storedHistory));
-  }
-
+  // We grab the parsed HTML using the Fandom API to use in our body
   useEffect(() => {
     if (pageId != undefined) {
       fetch(`https://starwars.fandom.com/api.php?action=parse&origin=*&format=json&page=${pageId}`)
       .then((x: any) => x.json())
       .then((x: any) => {
-        let t = x.parse.text['*'] 
-        t = t.replaceAll(tailRegexSpace, ' ')
-        t = t.replaceAll(tailRegexQuote, '"')
-        setTitle(x.parse.title);
-        setText(t);
-        updateHistory(x.parse.title, pageId);
+        if (x.parse) {
+          let t = x.parse.text['*'] 
+          t = t.replaceAll(tailRegexSpace, ' ')
+          t = t.replaceAll(tailRegexQuote, '"')
+          setTitle(x.parse.title);
+          setText(t);
+        } else {
+          setTitle('Page Not Found')
+          setText('');
+        }
       });
     } else {
       console.error('PageId is undefined');
@@ -240,7 +181,8 @@ const Article = (props: ArticleProps) => {
   })
 
   return (
-    <div>
+    <div className='main-container'>
+      <Navbar />
       <div style={{display: loading ? 'inline' : 'none'}} className='loading-screen'>
         <div className='loading-symbol'>
           <RebelCrest/>
@@ -251,12 +193,7 @@ const Article = (props: ArticleProps) => {
       </div>
       <div className='article-wrapper'>
         {parse(text)}
-        <RecentlyViewed
-          className='recently-viewed'
-          history={history}
-          clearHistoryCallback={clearHistory}
-          removeFromHistoryCallback={removeFromHistory}
-        />
+        <RecentlyViewed title={title} pageId={pageId}/>
       </div>
     </div>
   );
