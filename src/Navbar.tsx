@@ -10,6 +10,8 @@ const Navbar = () => {
       <a className='navbar-option' href='/wiki/Wookieepedia:About'> About </a>
       <a className='navbar-option' href='/wiki/Wookieepedia:Contact'> Contact </a>
       <a className='navbar-option' href='/wiki/Wookieepedia:FAQ'> FAQ </a>
+      <a className='navbar-option' href='/wiki/R2-D2'> R2-D2 (Example) </a>
+      <a className='navbar-option' href='/wiki/Anakin_Skywalker'> Anakin Skywalker (Example) </a>
     </div>
   )
 }
