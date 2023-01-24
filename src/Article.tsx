@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import parse from 'html-react-parser';
+import RebelCrest from './Redstarbird.svg';
+import { IoMdClose as CloseIcon } from 'react-icons/io';
+
 
 const hasLoaded = (selector: string) => {
   const elt = document.querySelector<HTMLElement>(selector);
@@ -17,22 +20,43 @@ interface RecentlyViewedProps {
   history: ArticleData[];
   className: string;
   clearHistoryCallback: () => void;
+  removeFromHistoryCallback: (pageId: string) => void;
 }
 
 const RecentlyViewed = (props: RecentlyViewedProps) => {
-  const { history, className, clearHistoryCallback } = props;
+  const { history, className, clearHistoryCallback, removeFromHistoryCallback } = props;
 
   return(
-    <div className={className}>
-      <h2>
-        Recently Viewed
-      </h2>
-      <button onClick={clearHistoryCallback}> Clear </button>
-      {history.slice(1).map((article: ArticleData, index: number) =>
-        <div key={article.title}>
-          {article.title}
-        </div>
-      )}
+    <div className='viewed-wrapper'>
+      <div className={className}>
+        <h2>
+          Recently Viewed
+        </h2>
+        {
+          history.length > 1 ?
+          <div>
+            <span onClick={clearHistoryCallback} className='clear-history'>clear all</span>
+            <ul>
+              {history.slice(1).map((article: ArticleData) =>
+                <li key={article.title} className='history-entry'>
+                  <div
+                    className='icon-container'
+                    onClick={() => removeFromHistoryCallback(article.pageId)}
+                  >
+                    <CloseIcon className='delete-history-button'/>
+                  </div>
+                  <a href={`/wiki/${article.pageId}`}>
+                    {article.title}
+                  </a>
+                </li>
+              )}
+            </ul>
+          </div>
+          : <div>
+            <i> Recently visited pages will show up here </i>
+          </div>
+        }
+      </div>
     </div>
   )
 }
@@ -110,6 +134,8 @@ const Article = (props: ArticleProps) => {
     const firstToc = document.querySelector<HTMLElement>('.tocsection-1');
 
     if (toc != null && wrapper != null && content != null &&  firstToc != null) {
+      wrapper.insertBefore(toc, content);
+
       const titleElement = document.createElement('h1');
       titleElement.setAttribute('id', 'article-title');
       titleElement.innerHTML = title;
@@ -164,8 +190,8 @@ const Article = (props: ArticleProps) => {
     storedHistory = storedHistory.filter((item: ArticleData, index: number) => {
       return storedHistory.findIndex((x: ArticleData) => x.title === item.title) === index;
     });
-    if (storedHistory.length > 5) {
-      storedHistory = storedHistory.slice(0, 5);
+    if (storedHistory.length > 10) {
+      storedHistory = storedHistory.slice(0, 10);
     }
     setHistory(storedHistory);
     window.localStorage.setItem('history', JSON.stringify(storedHistory));
@@ -174,6 +200,15 @@ const Article = (props: ArticleProps) => {
   const clearHistory = () => {
     window.localStorage.setItem('history', '[]');
     setHistory([]);
+  }
+
+  const removeFromHistory = (pageId: string) => {
+    let storedHistory = JSON.parse(window.localStorage.getItem('history') || '[]');
+    storedHistory = storedHistory.filter((item: ArticleData) => {
+      return item.pageId !== pageId;
+    });
+    setHistory(storedHistory);
+    window.localStorage.setItem('history', JSON.stringify(storedHistory));
   }
 
   useEffect(() => {
@@ -201,20 +236,28 @@ const Article = (props: ArticleProps) => {
   }, [ text, title ])
 
   useEffect(() => {
-    setLoading(!hasLoaded('#toc'));
+    setLoading(!hasLoaded('.mw-parser-output'));
   })
 
   return (
-    <div className='article-wrapper'>
-      <div style={{display: loading ? 'inline' : 'none'}}>
-        Fetching...
+    <div>
+      <div style={{display: loading ? 'inline' : 'none'}} className='loading-screen'>
+        <div className='loading-symbol'>
+          <RebelCrest/>
+          <h3 className='loading-text'>
+            Loading...
+          </h3>
+        </div>
       </div>
-      {parse(text)}
-      <RecentlyViewed
-        className='recently-viewed'
-        history={history}
-        clearHistoryCallback={clearHistory}
-      />
+      <div className='article-wrapper'>
+        {parse(text)}
+        <RecentlyViewed
+          className='recently-viewed'
+          history={history}
+          clearHistoryCallback={clearHistory}
+          removeFromHistoryCallback={removeFromHistory}
+        />
+      </div>
     </div>
   );
 };
